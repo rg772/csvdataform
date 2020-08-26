@@ -2,6 +2,7 @@
 
 namespace soc;
 
+use http\Exception\UnexpectedValueException;
 use Illuminate\Support\Str;
 
 class CSVDataForm
@@ -63,7 +64,7 @@ class CSVDataForm
             $slug = preg_replace('/[^A-Za-z0-9\-_]/', '', $slug);
 
             if (array_search($type, $expected_types) === false) {
-
+                throw new UnexpectedValueException("There was a bad data type. Export ended.");
             };
 
             // set label if necessary and skip rest
