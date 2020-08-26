@@ -27,7 +27,7 @@ The CSV is formatted in three columns intrepreted as
     - number
 - slug - Automatically created by the first 10 words of the label. This is the data key name in the object
 
-Do not have column headers in your CSV file. 
+Do not have column headers in your CSV file. `Required` inferred by ending the label with a asterisk.  
 
 | Column 1 (Label)      | Column 2 (Type)    | Column 3  (slug)   |
 | :------------- | :---------- | :----------- |
