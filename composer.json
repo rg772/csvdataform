@@ -1,0 +1,10 @@
+{
+    "name": "soc/csvdataform",
+    "type": "library",
+    "require": {},
+    "autoload": {
+        "files": [
+            "src/CSVDataForm.php"
+        ]
+    }
+}
