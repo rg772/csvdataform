@@ -48,7 +48,13 @@ class CSVDataForm
             $label = filter_var(trim($row[0]), FILTER_SANITIZE_STRING);
             $type = strtolower(filter_var(trim($row[1]), FILTER_SANITIZE_STRING));
             $required = (Str::endsWith($label, '*'));
-            $slug = implode('_', array_slice(explode(' ', $label), 0, 10));
+
+            // do we need to auto generate the slug
+            if (isset($row[2]) && !is_null($row[2])) {
+                $slug = trim(filter_var($row[3]), FILTER_SANITIZE_STRING);
+            } else {
+                $slug = implode('_', array_slice(explode(' ', $label), 0, 10));
+            }
 
             // tighten up slug
             $slug = trim($slug);
