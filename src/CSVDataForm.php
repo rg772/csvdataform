@@ -2,14 +2,14 @@
 
 namespace soc;
 
-use http\Exception\UnexpectedValueException;
 use Illuminate\Support\Str;
+use Symfony\Component\Console\Output\ConsoleOutput;
 
 class CSVDataForm
 {
     static public function test()
     {
-        return true;
+        return 'This is from the test() function.';
     }
 
     static public function loadCSV(string $filename): array
@@ -51,20 +51,18 @@ class CSVDataForm
             $required = (Str::endsWith($label, '*'));
 
             // do we need to auto generate the slug
-            if (isset($row[2]) && !is_null($row[2])) {
-                $slug = trim(filter_var($row[3]), FILTER_SANITIZE_STRING);
+            if ((isset($row[2])) && ($row[2] != '')) {
+                $slug = trim(filter_var($row[2]), FILTER_SANITIZE_STRING);
             } else {
                 $slug = implode('_', array_slice(explode(' ', $label), 0, 10));
             }
 
-            // tighten up slug
-            $slug = trim($slug);
-            $slug = str_replace(' ', '_', $slug);
-            $slug = str_replace('_*', '', $slug);
-            $slug = preg_replace('/[^A-Za-z0-9\-_]/', '', $slug);
+            //Clean up slug
+            $slug = self::CleanUpTextValue($slug);
 
+            // Halt everything if we have a bad/unexpected data type
             if (array_search($type, $expected_types) === false) {
-                throw new UnexpectedValueException("There was a bad data type. Export ended.");
+                throw new \Exception("There was a bad data type. Export ended.");
             };
 
             // set label if necessary and skip rest
@@ -74,19 +72,40 @@ class CSVDataForm
             }
 
             $input = self::MakeInitialInputStatement($type, $slug, $label, $required);
+            $schema = self::MakeInitialSchemaStatement($type, $slug, $label, $required);
 
 
             $data[$section][$slug] = [
                 'label' => $label,
                 'type' => $type,
                 'required' => $required,
-                'input' => $input
+                'input' => $input,
+                'schema' => $schema,
             ];
 
 
         }
 
         return $data;
+
+    }
+
+
+    static public function BuildSchemaBlock(string $filename)
+    {
+        $data = self::loadCSV($filename);
+
+        $toReturn = '';
+
+        foreach ($data as $section_label => $section) {
+           $toReturn .= "// $section_label " . "\n";
+
+            foreach ($section as $item) {
+                $toReturn .= $item['schema'] . "\n";
+            }
+        }
+
+        return $toReturn;
 
     }
 
@@ -97,7 +116,7 @@ class CSVDataForm
      * @param bool $required
      * @return string
      */
-    public static function MakeInitialInputStatement(string $type, string $slug, string $label, bool $required): string
+    private static function MakeInitialInputStatement(string $type, string $slug, string $label, bool $required): string
     {
         // Create input statement
         $input = "";
@@ -129,7 +148,7 @@ class CSVDataForm
                     $required
                 );
 
-                return trim($input);
+                break;
 
             case 'number':
                 $input = sprintf(
@@ -138,13 +157,13 @@ class CSVDataForm
                     $label
                 );
                 $input .= sprintf(
-                    "<input type=\"number\"> placeholder=\"%s\" name=\"%s\" required='%s'/>",
+                    "<input type=\"number\" placeholder=\"%s\" name=\"%s\" required='%s'/>",
                     $label,
                     $slug,
                     $required
                 );
 
-                return trim($input);
+                break;
 
             case 'text':
 
@@ -159,8 +178,25 @@ class CSVDataForm
                     $slug,
                     $required
                 );
+                break;
 
-                return trim($input);
+            // FILE
+            case 'file':
+
+                $input = sprintf(
+                    "<label for='%s'>%s</label>",
+                    $slug,
+                    $label
+                );
+                $input .= sprintf(
+                    "<input type=\"file\" placeholder=\"%s\" name=\"%s\" required='%s'/>",
+                    $label,
+                    $slug,
+                    $required
+                );
+
+
+                break;
 
             case 'boolean':
 
@@ -172,9 +208,115 @@ class CSVDataForm
                     <label for="{$slug}_no">No</label>
                 RADIO;
 
-                return trim($input);
+                break;
         }
-        return $input;
+        return trim($input);
     }
 
+
+    /**
+     * @param string $incoming
+     * @return string|string[]|null
+     */
+    private static function CleanUpTextValue(string $incoming)
+    {
+
+        $incoming = trim($incoming);    // trim
+        $incoming = str_replace(' ', '_', $incoming); // take out space
+        $incoming = str_replace('_*', '', $incoming); // take out ending asterisks
+        $incoming = preg_replace('/[^A-Za-z0-9\-_]/', '', $incoming); // filter down characters
+        $incoming = strtolower($incoming);
+        return $incoming;
+    }
+
+
+    public static function BuildFormSegment(string $filename)
+    {
+
+        $toReturn = '';
+
+        $data = self::loadCSV($filename);
+
+        foreach ($data as $label => $section) {
+            $toReturn .= sprintf("<div class='form-header'>%s</div>", $label);
+
+            foreach ($section as $key => $items) {
+
+                $formatted_label_input = str_replace("</label><input", "</label> \n \t\t <input", $items['input']);
+
+                $toReturn .=sprintf(
+                    "\t<div class='%s'> \n\t\t %s \n\t </div>",
+                    $key,
+                    $formatted_label_input
+                );
+            }
+
+            $toReturn .="<div>";
+
+        }
+
+        return $toReturn;
+
+    }
+
+
+    private static function MakeInitialSchemaStatement($type, $slug, $label, $required): string
+    {
+        $toReturn = '';
+
+        switch ($type) {
+            case 'string':
+            case 'email':
+            case 'link':
+            case 'file':
+                $toReturn = sprintf(
+                    " \$table->string('%s')",
+                    $slug
+                );
+                break;
+
+            case 'number':
+                $toReturn = sprintf(
+                    " \$table->interger('%s')",
+                    $slug
+                );
+                break;
+
+            case 'text':
+                $toReturn = sprintf(
+                    " \$table->text('%s')",
+                    $slug
+                );
+                break;
+
+            case 'boolean':
+                $toReturn = sprintf(
+                    " \$table->boolean('%s')",
+                    $slug
+                );
+                break;
+
+
+            default:
+                $toReturn = "// insert manually";
+
+        }
+
+
+        // Determine if Not required then add the nullable()
+        if (!$required) {
+            $toReturn .= "->nullable()";
+        }
+
+        // Add on ;
+        $toReturn = trim($toReturn) . ';';
+
+        return $toReturn;
+
+    }
+
+    static private function out(string $out)
+    {
+        (new ConsoleOutput())->write($out . PHP_EOL) ;
+    }
 }
