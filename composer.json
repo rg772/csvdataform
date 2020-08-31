@@ -4,7 +4,15 @@
     "require": {},
     "autoload": {
         "files": [
-            "src/CSVDataForm.php"
+            "src/CSVDataForm.php",
+            "src/CSVDataFormGenerateSchemaCommand.php"
         ]
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "soc\\CSVDataFormServiceProvider"
+            ]
+        }
     }
 }

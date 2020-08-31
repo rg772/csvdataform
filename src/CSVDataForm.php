@@ -2,11 +2,48 @@
 
 namespace soc;
 
+use App\Console\Kernel;
+use App\Providers\AppServiceProvider;
+use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Symfony\Component\Console\Output\ConsoleOutput;
 
+
+class CSVDataFormServiceProvider extends ServiceProvider {
+
+    protected $newCommands = [
+        CSVDataFormGenerateSchemaCommand::class
+    ];
+
+
+    /**
+     * Register the service provider.
+     *
+     * @return void
+     */
+    public function register()
+    {
+        $this->commands($this->newCommands);
+    }
+
+    /**
+     * Register the 'eternaltree:install' command.
+     *
+     * @return void
+     */
+    protected function registerInstallCommand()
+    {
+       $this->register();
+    }
+
+}
+
+
+
 class CSVDataForm
 {
+
+
     static public function test()
     {
         return 'This is from the test() function.';
@@ -51,7 +88,7 @@ class CSVDataForm
             $required = (Str::endsWith($label, '*'));
 
             // do we need to auto generate the slug
-            if ((isset($row[2])) && ($row[2] != '')) {
+            if ((isset($row[2])) && (Str::length($row[2]) > 2)) {
                 $slug = trim(filter_var($row[2]), FILTER_SANITIZE_STRING);
             } else {
                 $slug = implode('_', array_slice(explode(' ', $label), 0, 10));
@@ -98,7 +135,7 @@ class CSVDataForm
         $toReturn = '';
 
         foreach ($data as $section_label => $section) {
-           $toReturn .= "// $section_label " . "\n";
+            $toReturn .= "// $section_label " . "\n";
 
             foreach ($section as $item) {
                 $toReturn .= $item['schema'] . "\n";
@@ -244,14 +281,14 @@ class CSVDataForm
 
                 $formatted_label_input = str_replace("</label><input", "</label> \n \t\t <input", $items['input']);
 
-                $toReturn .=sprintf(
+                $toReturn .= sprintf(
                     "\t<div class='%s'> \n\t\t %s \n\t </div>",
                     $key,
                     $formatted_label_input
                 );
             }
 
-            $toReturn .="<div>";
+            $toReturn .= "<div>";
 
         }
 
@@ -317,6 +354,6 @@ class CSVDataForm
 
     static private function out(string $out)
     {
-        (new ConsoleOutput())->write($out . PHP_EOL) ;
+        (new ConsoleOutput())->write($out . PHP_EOL);
     }
 }
